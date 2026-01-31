@@ -54,7 +54,11 @@ public class TaskManager {
     }
 
     public List<Subtask> getSubtaskOfEpic(int id) {
-        return //todo проверить если id не представлен в taskManager, то возвращать пустой список иначе возвращать список подзадач
+        Epic epic = epics.get(id);
+        if (epic == null) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(epic.getAllSubtask());
     }
 
     public Task removeTask(int id) {
@@ -110,7 +114,10 @@ public class TaskManager {
         }
     }
 
-    public boolean addTask(Task task) { // todo добавить проверку на null
+    public boolean addTask(Task task) {
+        if (task == null) {
+            return false;
+        }
         task.setId(idGen++);
         tasks.put(task.getId(), task);
         return true;
