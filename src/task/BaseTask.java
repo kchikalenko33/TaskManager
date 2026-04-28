@@ -13,6 +13,12 @@ package task;
          this.status = status;
      }
 
+     protected BaseTask(String name, String description, Status status) {
+         this.status = status;
+         this.name = name;
+         this.description = description;
+     }
+
      public String getName() {
          return name;
      }
@@ -46,8 +52,8 @@ package task;
      }
      @Override
      public String toString() {
-         return String.format("%s{id=%d, name='%s', status=%s}",
-                 getClass().getSimpleName(), id, name, status);
+         return String.format("%s{id=%d, name='%s'}",
+                 getClass().getSimpleName(), id, name);
      }
 
  }

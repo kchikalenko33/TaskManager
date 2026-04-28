@@ -8,8 +8,12 @@ import java.util.Map;
 public class Epic extends BaseTask {
     private Map<Integer, Subtask> subtasks = new HashMap<>();
 
-    protected Epic(String name, String description, int id, Status status) {
+    public Epic(String name, String description, int id, Status status) {
         super(name, description, id, status);
+    }
+
+    public Epic(String name, String description, Status status) {
+        super(name, description, status);
     }
 
     public List<Subtask> getAllSubtask() {

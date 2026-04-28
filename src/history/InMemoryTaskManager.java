@@ -29,15 +29,34 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     public void removeAllTasks() {
+        for (Task task : tasks.values()) {
+            historyManager.remove(task.getId());
+        }
 
         tasks.clear();
     }
 
     public void removeAllSubtasks() {
+        for (Subtask subtask : subtasks.values()) {
+            historyManager.remove(subtask.getId());
+        }
+
         subtasks.clear();
+
+        for (Epic epic : epics.values()) {
+            updateEpicStatus(epic);
+        }
     }
 
     public void removeAllEpics() {
+        for (Epic epic : epics.values()) {
+            historyManager.remove(epic.getId());
+        }
+
+        for (Subtask subtask : subtasks.values()) {
+            historyManager.remove(subtask.getId());
+        }
+
         epics.clear();
         subtasks.clear();
     }
@@ -81,21 +100,24 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     public Task removeTask(int id) {
+        historyManager.remove(id);
         return tasks.remove(id);
     }
 
     public Subtask removeSubtask(int id) {
+        historyManager.remove(id);
         Subtask subtask = subtasks.remove(id);
         if (subtask != null) {
-            Epic epic = subtask.getEpic();
-            if (epic != null) {
-                epic.removeSubtask(id);
-            }
+            int epic = subtask.getEpicId();
+            epics.get(epic).removeSubtask(id);
+                //epic.removeSubtask(id);
+
         }
         return subtask;
     }
 
     public Epic removeEpic(int id) {
+        historyManager.remove(id);
         Epic epic = epics.remove(id);
         if (epic != null) {
             for (int subId : epic.getSubtaskIds()) {
@@ -143,10 +165,11 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     public boolean addSubtask(Subtask subtask) {
-        if (!epics.containsKey(subtask.getEpic().getId())) {
+        if (!epics.containsKey(subtask.getEpicId())) {
             return false;
         }
-        Epic epic = subtask.getEpic();
+
+        Epic epic = epics.get(subtask.getEpicId());
         if (epic == null) {
             return false;
         }
@@ -177,7 +200,7 @@ public class InMemoryTaskManager implements TaskManager {
 
     public boolean updateSubtask(Subtask subtask) {
         if (subtask == null || !subtasks.containsKey(subtask.getId())
-                || !epics.containsKey(subtask.getEpic().getId())) {
+                || !epics.containsKey(subtask.getEpicId())) {
             return false;
         }
 
