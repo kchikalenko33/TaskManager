@@ -2,7 +2,6 @@ package taskManager;
 
 import history.HistoryManager;
 import history.InMemoryHistoryManager;
-import history.InMemoryTaskManager;
 
 public class Managers {
     public static HistoryManager getDefaultHistory() {

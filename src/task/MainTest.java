@@ -1,6 +1,6 @@
 package task;
 
-import history.InMemoryTaskManager;
+import taskManager.InMemoryTaskManager;
 import taskManager.Managers;
 
 public class MainTest {

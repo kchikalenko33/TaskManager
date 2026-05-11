@@ -1,8 +1,7 @@
-package history;
+package taskManager;
 
+import history.HistoryManager;
 import task.*;
-import taskManager.Managers;
-import taskManager.TaskManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,11 +9,11 @@ import java.util.List;
 import java.util.Map;
 
 public class InMemoryTaskManager implements TaskManager {
-    private Map<Integer, Task> tasks = new HashMap<>();
-    private Map<Integer, Subtask> subtasks = new HashMap<>();
-    private Map<Integer, Epic> epics = new HashMap<>();
-    private HistoryManager historyManager = Managers.getDefaultHistory();
-    private int idGen = 1;
+    protected Map<Integer, Task> tasks = new HashMap<>();
+    protected Map<Integer, Subtask> subtasks = new HashMap<>();
+    protected Map<Integer, Epic> epics = new HashMap<>();
+    protected HistoryManager historyManager = Managers.getDefaultHistory();
+    protected int idGen = 1;
 
     public List<Task> getTasks() {
         return new ArrayList<>(tasks.values());
@@ -161,6 +160,7 @@ public class InMemoryTaskManager implements TaskManager {
         }
         task.setId(idGen++);
         tasks.put(task.getId(), task);
+
         return true;
     }
 
