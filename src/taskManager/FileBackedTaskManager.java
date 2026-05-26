@@ -4,6 +4,9 @@ import history.HistoryManager;
 import task.*;
 
 import java.io.*;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -112,17 +115,21 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
 
     public String toString(BaseTask task) {
         StringBuilder sb = new StringBuilder();
+       // DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("YYYY-MM-DD")
 
         if (task instanceof Task) {
             sb.append(task.getId()).append(",").append(TypeTask.TASK.name()).append(",").append(task.getName())
-                    .append(",").append(task.getStatus()).append(",").append(task.getDescription()).append(",");
+                    .append(",").append(task.getStatus()).append(",").append(task.getDescription()).append(",")
+                    .append(task.getStartTime().toString()).append(",").append(task.getDuration().toString());
         } else if (task instanceof Epic) {
             sb.append(task.getId()).append(",").append(TypeTask.EPIC.name()).append(",").append(task.getName())
-                    .append(",").append(task.getStatus()).append(",").append(task.getDescription()).append(",");
+                    .append(",").append(task.getStatus()).append(",").append(task.getDescription()).append(",")
+                    .append(task.getStartTime().toString()).append(",").append(task.getDuration().toString());
         } else if (task instanceof Subtask) {
             sb.append(task.getId()).append(",").append(TypeTask.SUBTASK.name()).append(",").append(task.getName())
                     .append(",").append(task.getStatus()).append(",").append(task.getDescription()).append(",")
-                    .append(((Subtask) task).getEpicId());
+                    .append(task.getStartTime().toString()).append(",")
+                    .append(task.getDuration().toString()).append(",").append(((Subtask) task).getEpicId());
         }
 
         return sb.toString();
@@ -144,19 +151,21 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
         String name = parts[2];
         Status status = Status.valueOf(parts[3]);
         String description = parts[4];
+        LocalDateTime startTime = LocalDateTime.parse(parts[5]); //todo распарсить по форматеру вида 2026-05-19T05:12PT4H
+        Duration duration = Duration.parse(parts[6]);
 
         BaseTask task = null;
 
         switch (type) {
             case "TASK":
-                task = new Task(name, description, id, status);
+                task = new Task(name, description, id, status, startTime, duration);
                 break;
             case "EPIC":
-                task = new Epic(name, description, id, status);
+                task = new Epic(name, description, id, status, startTime, duration);
                 break;
             case "SUBTASK":
-                int epicId = Integer.parseInt(parts[5]);
-                task = new Subtask(name, description, id, status, epicId);
+                int epicId = Integer.parseInt(parts[7]);
+                task = new Subtask(name, description, id, status, epicId, startTime,duration);
                 break;
         }
 

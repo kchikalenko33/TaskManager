@@ -1,18 +1,19 @@
 package taskManager;
 
+import exception.IntersectionException;
 import history.HistoryManager;
 import task.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDate;
+import java.util.*;
 
 public class InMemoryTaskManager implements TaskManager {
     protected Map<Integer, Task> tasks = new HashMap<>();
     protected Map<Integer, Subtask> subtasks = new HashMap<>();
     protected Map<Integer, Epic> epics = new HashMap<>();
     protected HistoryManager historyManager = Managers.getDefaultHistory();
+    protected TreeSet<BaseTask> priorityTask = new TreeSet<>(Comparator.nullsLast(
+            Comparator.comparing(BaseTask::getStartTime))); // todo в конструкторе добавить компаратор по требованию из задания
     protected int idGen = 1;
 
     public List<Task> getTasks() {
@@ -27,9 +28,23 @@ public class InMemoryTaskManager implements TaskManager {
         return new ArrayList<>(epics.values());
     }
 
+    @Override
+    public List<BaseTask> getHistory() {
+        return historyManager.getHistory();
+    }
+
+    public List<BaseTask> getPrioritizedTasks() {
+        return new ArrayList<>(priorityTask);
+    }
+
+    public boolean hasIntersection (BaseTask task) {
+        return false; //todo
+    }
+
     public void removeAllTasks() {
         for (Task task : tasks.values()) {
             historyManager.remove(task.getId());
+            priorityTask.remove(task);
         }
 
         tasks.clear();
@@ -38,6 +53,7 @@ public class InMemoryTaskManager implements TaskManager {
     public void removeAllSubtasks() {
         for (Subtask subtask : subtasks.values()) {
             historyManager.remove(subtask.getId());
+            priorityTask.remove(subtask);
         }
 
         subtasks.clear();
@@ -127,6 +143,7 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     public void updateEpicStatus(Epic epic) {
+
         if (epic.getSubtaskIds().isEmpty()) {
             epic.setStatus(Status.NEW);
             return;
@@ -158,8 +175,14 @@ public class InMemoryTaskManager implements TaskManager {
         if (task == null) {
             return false;
         }
+
+        if (hasIntersection(task)) {
+            throw new IntersectionException("Даты добавляемой задачи пересекаются с имеющеммся");
+        }
+
         task.setId(idGen++);
         tasks.put(task.getId(), task);
+        priorityTask.add(task);
 
         return true;
     }
@@ -169,14 +192,21 @@ public class InMemoryTaskManager implements TaskManager {
             return false;
         }
 
+        if (hasIntersection(subtask)) {
+            throw new IntersectionException("Даты добавляемой задачи пересекаются с имеющеммся");
+        }
+
         Epic epic = epics.get(subtask.getEpicId());
+
         if (epic == null) {
             return false;
         }
+
         subtask.setId(idGen);
         subtasks.put(idGen++, subtask);
         epic.addSubtask(subtask);
         updateEpicStatus(epic);
+        priorityTask.add(subtask);
 
         return true;
     }
@@ -185,6 +215,11 @@ public class InMemoryTaskManager implements TaskManager {
         if (epic == null) {
             return false;
         }
+
+        if (hasIntersection(epic)) {
+            throw new IntersectionException("Даты добавляемой задачи пересекаются с имеющеммся");
+        }
+
         epic.setId(idGen);
         epics.put(idGen++, epic);
         return true;
@@ -194,6 +229,11 @@ public class InMemoryTaskManager implements TaskManager {
         if (task == null || !tasks.containsKey(task.getId())) {
             return false;
         }
+
+        if (hasIntersection(task)) {
+            throw new IntersectionException("Даты добавляемой задачи пересекаются с имеющеммся");
+        }
+
         tasks.put(task.getId(), task);
         return true;
     }
@@ -202,6 +242,10 @@ public class InMemoryTaskManager implements TaskManager {
         if (subtask == null || !subtasks.containsKey(subtask.getId())
                 || !epics.containsKey(subtask.getEpicId())) {
             return false;
+        }
+
+        if (hasIntersection(subtask)) {
+            throw new IntersectionException("Даты добавляемой задачи пересекаются с имеющеммся");
         }
 
         subtasks.put(subtask.getId(), subtask);
@@ -213,12 +257,12 @@ public class InMemoryTaskManager implements TaskManager {
             return false;
         }
 
+        if (hasIntersection(epic)) {
+            throw new IntersectionException("Даты добавляемой задачи пересекаются с имеющеммся");
+        }
+
         epics.put(epic.getId(), epic);
         return true;
     }
 
-    @Override
-    public List<BaseTask> getHistory() {
-        return historyManager.getHistory();
-    }
 }

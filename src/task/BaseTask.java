@@ -1,22 +1,45 @@
 package task;
 
- public abstract class BaseTask {
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAmount;
+
+public abstract class BaseTask {
      protected String name;
      protected String description;
      protected int id;
      protected Status status;
+     protected LocalDateTime startTime;
+     protected Duration duration;
 
-     protected  BaseTask (String name, String description, int id, Status status) {
+    public BaseTask(String name, String description, int id, Status status) {
+        this.name = name;
+        this.description = description;
+        this.id = id;
+        this.status = status;
+    }
+
+    protected  BaseTask (String name, String description, int id, Status status, LocalDateTime startTime, Duration duration) {
          this.name = name;
          this.description = description;
          this.id = id;
          this.status = status;
+         this.startTime = startTime;
+         this.duration = duration;
      }
 
-     protected BaseTask(String name, String description, Status status) {
+     protected BaseTask(String name, String description, Status status, LocalDateTime startTime, Duration duration) {
          this.status = status;
          this.name = name;
          this.description = description;
+         this.startTime = startTime;
+         this.duration = duration;
+     }
+
+     public LocalDateTime getEndTime() {
+        return startTime.plus(duration);
      }
 
      public String getName() {
@@ -47,7 +70,23 @@ package task;
          return status;
      }
 
-     public void setStatus(Status status) {
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public Duration getDuration() {
+        return duration;
+    }
+
+    public void setDuration(Duration duration) {
+        this.duration = duration;
+    }
+
+    public void setStatus(Status status) {
          this.status = status;
      }
      @Override
