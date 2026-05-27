@@ -5,6 +5,7 @@ import history.HistoryManager;
 import task.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 public class InMemoryTaskManager implements TaskManager {
@@ -37,8 +38,33 @@ public class InMemoryTaskManager implements TaskManager {
         return new ArrayList<>(priorityTask);
     }
 
-    public boolean hasIntersection (BaseTask task) {
-        return false; //todo
+    public boolean hasIntersection(BaseTask task) {
+        LocalDateTime start = task.getStartTime();
+        LocalDateTime end = task.getEndTime();
+
+        if (start == null || end == null) {
+            return false;
+        }
+
+        for (BaseTask existingTask : priorityTask) {
+            LocalDateTime existingStart = existingTask.getStartTime();
+            LocalDateTime existingEnd = existingTask.getEndTime();
+
+            if (existingStart == null || existingEnd == null) {
+                continue;
+            }
+
+
+            boolean isStartInside = !start.isBefore(existingStart) && !start.isAfter(existingEnd);
+            boolean isEndInside = !end.isBefore(existingStart) && !end.isAfter(existingEnd);
+            boolean isSurrounding = start.isBefore(existingStart) && end.isAfter(existingEnd);
+
+            if (isStartInside || isEndInside || isSurrounding) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void removeAllTasks() {
@@ -125,7 +151,7 @@ public class InMemoryTaskManager implements TaskManager {
         if (subtask != null) {
             int epic = subtask.getEpicId();
             epics.get(epic).removeSubtask(id);
-                //epic.removeSubtask(id);
+            //epic.removeSubtask(id);
 
         }
         return subtask;
@@ -225,6 +251,33 @@ public class InMemoryTaskManager implements TaskManager {
         return true;
     }
 
+    public boolean patchTask(BaseTask task) {
+        if (task instanceof Task) {
+            Task task1 = tasks.get(task.getId());
+            if (task1 == null) {
+                return false;
+            }
+            task1.setName(task.getName());
+            task1.setStatus(task.getStatus());
+            task1.setDescription(task.getDescription());
+            task1.setDuration(task.getDuration());
+            task1.setStartTime(task.getStartTime());
+            return true;
+        } else if (task instanceof Subtask) {
+            Subtask subtask = subtasks.get(task.getId());
+            if (subtask == null) {
+                return false;
+            }
+            subtask.setName(task.getName());
+            subtask.setStatus(task.getStatus());
+            subtask.setDescription(task.getDescription());
+            subtask.setDuration(task.getDuration());
+            subtask.setStartTime(task.getStartTime());
+            return true;
+        }
+        return false;
+    }
+
     public boolean updateTask(Task task) {
         if (task == null || !tasks.containsKey(task.getId())) {
             return false;
@@ -234,8 +287,8 @@ public class InMemoryTaskManager implements TaskManager {
             throw new IntersectionException("Даты добавляемой задачи пересекаются с имеющеммся");
         }
 
-        tasks.put(task.getId(), task);
-        return true;
+        // tasks.put(task.getId(), task);
+        return patchTask(task);
     }
 
     public boolean updateSubtask(Subtask subtask) {
@@ -248,8 +301,8 @@ public class InMemoryTaskManager implements TaskManager {
             throw new IntersectionException("Даты добавляемой задачи пересекаются с имеющеммся");
         }
 
-        subtasks.put(subtask.getId(), subtask);
-        return true;
+        // subtasks.put(subtask.getId(), subtask);
+        return patchTask(subtask);
     }
 
     public boolean updateEpic(Epic epic) {
@@ -257,9 +310,9 @@ public class InMemoryTaskManager implements TaskManager {
             return false;
         }
 
-        if (hasIntersection(epic)) {
-            throw new IntersectionException("Даты добавляемой задачи пересекаются с имеющеммся");
-        }
+//        if (hasIntersection(epic)) {
+//            throw new IntersectionException("Даты добавляемой задачи пересекаются с имеющеммся");
+//        }
 
         epics.put(epic.getId(), epic);
         return true;
