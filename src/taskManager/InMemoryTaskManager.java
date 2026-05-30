@@ -4,7 +4,6 @@ import exception.IntersectionException;
 import history.HistoryManager;
 import task.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -14,7 +13,7 @@ public class InMemoryTaskManager implements TaskManager {
     protected Map<Integer, Epic> epics = new HashMap<>();
     protected HistoryManager historyManager = Managers.getDefaultHistory();
     protected TreeSet<BaseTask> priorityTask = new TreeSet<>(Comparator.nullsLast(
-            Comparator.comparing(BaseTask::getStartTime))); // todo в конструкторе добавить компаратор по требованию из задания
+            Comparator.comparing(BaseTask::getStartTime)));
     protected int idGen = 1;
 
     public List<Task> getTasks() {
