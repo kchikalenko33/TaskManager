@@ -1,3 +1,5 @@
+import exception.SubtaskNotFoundException;
+import exception.TaskNotFoundException;
 import org.junit.jupiter.api.*;
 import task.*;
 import taskManager.InMemoryTaskManager;
@@ -6,6 +8,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class InMemoryTaskManagerTest {
@@ -170,7 +173,7 @@ public class InMemoryTaskManagerTest {
         taskManager.addTask(task2);
         taskManager.getTask(task1.getId());
         taskManager.getTask(task2.getId());
-        List<Task> expected = List.of(task1,task2);
+        List<Task> expected = List.of(task1, task2);
 
         assertEquals(expected, taskManager.getHistory());
     }
@@ -322,4 +325,88 @@ public class InMemoryTaskManagerTest {
         assertTrue(taskManager.getPrioritizedTasks().isEmpty());
     }
 
+    @Test
+    void removeAllSubtasksEmptyTasksListTest() {
+        taskManager.removeAllSubtasks();
+
+        assertTrue(taskManager.getSubtasks().isEmpty());
+        assertTrue(taskManager.getHistory().isEmpty());
+        assertTrue(taskManager.getPrioritizedTasks().isEmpty());
+    }
+
+    @Test
+    void removeAllEpicsWhenEpicsAndSubtasksExistTest() {
+        taskManager.addEpic(epic1);
+        taskManager.addEpic(epic2);
+        subtask1.setEpicId(epic1.getId());
+        subtask2.setEpicId(epic2.getId());
+        taskManager.addSubtask(subtask1);
+        taskManager.addSubtask(subtask2);
+
+        taskManager.getEpic(epic1.getId());
+        taskManager.getEpic(epic2.getId());
+        taskManager.getSubtask(subtask1.getId());
+        taskManager.getSubtask(subtask2.getId());
+
+        taskManager.removeAllEpics();
+
+        assertTrue(taskManager.getEpics().isEmpty());
+        assertTrue(taskManager.getSubtasks().isEmpty());
+        assertTrue(taskManager.getHistory().isEmpty());
+    }
+
+    @Test
+    void removeAllEpicsEmptyTest() {
+        taskManager.removeAllEpics();
+
+        assertTrue(taskManager.getEpics().isEmpty());
+        assertTrue(taskManager.getSubtasks().isEmpty());
+        assertTrue(taskManager.getHistory().isEmpty());
+    }
+
+    @Test
+    void getTaskExistsInTasksTest() {
+        taskManager.addTask(task1);
+
+        assertEquals(new ArrayList<>(), taskManager.getHistory());
+        assertEquals(task1, taskManager.getTask(task1.getId()));
+    }
+
+    @Test
+    void getTaskExistsInTasksAndHistoryTest() {
+        taskManager.addTask(task1);
+
+        assertEquals(task1, taskManager.getTask(task1.getId()));
+        assertEquals(List.of(task1), taskManager.getHistory());
+    }
+
+    @Test
+    void getTaskNotFoundTest() {
+        assertThrows(TaskNotFoundException.class, () -> taskManager.getTask(Integer.MAX_VALUE));
+    }
+
+    @Test
+    void getSubtaskExistsInSubtasksTest() {
+        taskManager.addEpic(epic1);
+        subtask1.setEpicId(epic1.getId());
+        taskManager.addSubtask(subtask1);
+
+        assertEquals(new ArrayList<>(), taskManager.getHistory());
+        assertEquals(subtask1, taskManager.getSubtask(subtask1.getId()));
+    }
+
+    @Test
+    void getSubtaskExistsInSubtasksAndHistoryTest() {
+        taskManager.addEpic(epic1);
+        subtask1.setEpicId(epic1.getId());
+        taskManager.addSubtask(subtask1);
+
+        assertEquals(subtask1, taskManager.getSubtask(subtask1.getId()));
+        assertEquals(List.of(subtask1), taskManager.getHistory());
+    }
+
+    @Test
+    void getSubtaskNotFoundTest() {
+        assertThrows(SubtaskNotFoundException.class, () -> taskManager.getSubtask(Integer.MAX_VALUE));
+    }
 }

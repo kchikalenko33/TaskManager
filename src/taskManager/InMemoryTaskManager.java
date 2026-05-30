@@ -1,6 +1,8 @@
 package taskManager;
 
 import exception.IntersectionException;
+import exception.SubtaskNotFoundException;
+import exception.TaskNotFoundException;
 import history.HistoryManager;
 import task.*;
 
@@ -104,6 +106,8 @@ public class InMemoryTaskManager implements TaskManager {
     public Task getTask(int id) {
         Task task = tasks.get(id);
 
+        if (task == null) throw new TaskNotFoundException(String.format("Задача с id '%d' не найдена", id));
+
         if (tasks.containsKey(id)) {
             historyManager.add(task);
         }
@@ -113,6 +117,8 @@ public class InMemoryTaskManager implements TaskManager {
 
     public Subtask getSubtask(int id) {
         Subtask subtask = subtasks.get(id);
+
+        if (subtask == null) throw new SubtaskNotFoundException(String.format("Подзадача с id '%d' не найдена", id));
 
         if (subtasks.containsKey(id)) {
             historyManager.add(subtask);
