@@ -1,5 +1,6 @@
 package taskManager;
 
+import exception.EpicNotFoundException;
 import exception.IntersectionException;
 import exception.SubtaskNotFoundException;
 import exception.TaskNotFoundException;
@@ -48,6 +49,11 @@ public class InMemoryTaskManager implements TaskManager {
         }
 
         for (BaseTask existingTask : priorityTask) {
+            if (existingTask.getId() == task.getId()) {
+                // пропускаем саму себя при обновлении
+                continue;
+            }
+
             LocalDateTime existingStart = existingTask.getStartTime();
             LocalDateTime existingEnd = existingTask.getEndTime();
 
@@ -130,6 +136,8 @@ public class InMemoryTaskManager implements TaskManager {
     public Epic getEpic(int id) {
         Epic epic = epics.get(id);
 
+        if (epic == null) throw new EpicNotFoundException(String.format("Эпик с id '%d' не найден", id));
+
         if (epics.containsKey(id)) {
             historyManager.add(epic);
         }
@@ -147,6 +155,8 @@ public class InMemoryTaskManager implements TaskManager {
 
     public Task removeTask(int id) {
         historyManager.remove(id);
+        Task task = tasks.get(id);
+        if (task != null) priorityTask.remove(task);
         return tasks.remove(id);
     }
 
@@ -154,22 +164,27 @@ public class InMemoryTaskManager implements TaskManager {
         historyManager.remove(id);
         Subtask subtask = subtasks.remove(id);
         if (subtask != null) {
-            int epic = subtask.getEpicId();
-            epics.get(epic).removeSubtask(id);
-            //epic.removeSubtask(id);
+            int epicId = subtask.getEpicId();
+            Epic epic = epics.get(epicId);
 
+            if (epic != null) epics.get(epicId).removeSubtask(id);
+
+            priorityTask.remove(subtask);
         }
+
         return subtask;
     }
 
     public Epic removeEpic(int id) {
         historyManager.remove(id);
         Epic epic = epics.remove(id);
+
         if (epic != null) {
             for (int subId : epic.getSubtaskIds()) {
                 removeSubtask(subId);
             }
         }
+
         return epic;
     }
 
