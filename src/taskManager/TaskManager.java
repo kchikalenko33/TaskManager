@@ -45,4 +45,10 @@ public interface TaskManager {
     boolean updateEpic(Epic epic);
 
     List<BaseTask> getHistory();
+
+    List<BaseTask> getPrioritizedTasks();
+
+    boolean hasIntersection(BaseTask task);
+
+    boolean patchTask (BaseTask task);
 }

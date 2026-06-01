@@ -154,6 +154,8 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     public Task removeTask(int id) {
+        if (!tasks.containsKey(id)) throw new TaskNotFoundException("Нет задачи");
+
         historyManager.remove(id);
         Task task = tasks.get(id);
         if (task != null) priorityTask.remove(task);
@@ -338,4 +340,8 @@ public class InMemoryTaskManager implements TaskManager {
         return true;
     }
 
+    HistoryManager getHistoryManager() {
+        HistoryManager copyHistoryManager = historyManager;
+        return copyHistoryManager;
+    }
 }

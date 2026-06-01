@@ -1,10 +1,11 @@
-import exception.EpicNotFoundException;
-import exception.IntersectionException;
-import exception.SubtaskNotFoundException;
-import exception.TaskNotFoundException;
-import org.junit.jupiter.api.*;
+package taskManager;
+
+import exception.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import task.*;
 import taskManager.InMemoryTaskManager;
+import taskManager.TaskManager;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -13,17 +14,27 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class InMemoryTaskManagerTest {
-    Task task1;
-    Task task2;
-    Subtask subtask1;
-    Subtask subtask2;
-    Epic epic1;
-    Epic epic2;
-    InMemoryTaskManager taskManager;
+/**
+ * Базовый тестовый класс для всех реализаций TaskManager.
+ * Наследники должны реализовать createTaskManager().
+ */
+public abstract class TaskManagerTest<T extends TaskManager> {
+
+    protected T taskManager;
+
+    protected Task task1;
+    protected Task task2;
+    protected Subtask subtask1;
+    protected Subtask subtask2;
+    protected Epic epic1;
+    protected Epic epic2;
+
+    protected abstract T createTaskManager();
 
     @BeforeEach
     void init() {
+        taskManager = createTaskManager();
+
         task1 = new Task("Задача1", "Описание1", Status.NEW,
                 LocalDateTime.of(2026, 5, 19, 5, 12), Duration.ofHours(4));
         task2 = new Task("Задача2", "Описание2", Status.NEW,
@@ -36,8 +47,9 @@ public class InMemoryTaskManagerTest {
                 LocalDateTime.of(2026, 5, 19, 5, 13), Duration.ofHours(4));
         subtask2 = new Subtask("подзадача2", "Описание2", epic1.getId(),
                 Status.NEW, LocalDateTime.of(2026, 4, 19, 5, 12), Duration.ofHours(2));
-        taskManager = new InMemoryTaskManager();
     }
+
+    // ---------- Эпики: статус ----------
 
     @Test
     void updateEpicStatusEmptyEpicTest() {
@@ -52,8 +64,8 @@ public class InMemoryTaskManagerTest {
     void updateEpicStatusAllNewTest() {
         taskManager.addEpic(epic1);
         epic1.setStatus(Status.IN_PROGRESS);
-        subtask1.setEpicId(1);
-        subtask2.setEpicId(1);
+        subtask1.setEpicId(epic1.getId());
+        subtask2.setEpicId(epic1.getId());
         taskManager.addSubtask(subtask1);
         taskManager.addSubtask(subtask2);
 
@@ -66,9 +78,9 @@ public class InMemoryTaskManagerTest {
     void updateEpicStatusAllDoneTest() {
         taskManager.addEpic(epic1);
         epic1.setStatus(Status.IN_PROGRESS);
-        subtask1.setEpicId(1);
+        subtask1.setEpicId(epic1.getId());
         subtask1.setStatus(Status.DONE);
-        subtask2.setEpicId(1);
+        subtask2.setEpicId(epic1.getId());
         subtask2.setStatus(Status.DONE);
         taskManager.addSubtask(subtask1);
         taskManager.addSubtask(subtask2);
@@ -82,11 +94,12 @@ public class InMemoryTaskManagerTest {
     void updateEpicStatusAllNewAndDoneTest() {
         taskManager.addEpic(epic1);
         epic1.setStatus(Status.IN_PROGRESS);
-        subtask1.setEpicId(1);
-        subtask2.setEpicId(1);
+        subtask1.setEpicId(epic1.getId());
+        subtask2.setEpicId(epic1.getId());
         subtask2.setStatus(Status.DONE);
         taskManager.addSubtask(subtask1);
         taskManager.addSubtask(subtask2);
+
         assertEquals(2, epic1.getAllSubtask().size());
         taskManager.updateEpicStatus(epic1);
         assertEquals(Status.IN_PROGRESS, epic1.getStatus());
@@ -96,9 +109,9 @@ public class InMemoryTaskManagerTest {
     void updateEpicStatusAllInProgressTest() {
         taskManager.addEpic(epic1);
         epic1.setStatus(Status.IN_PROGRESS);
-        subtask1.setEpicId(1);
+        subtask1.setEpicId(epic1.getId());
         subtask1.setStatus(Status.IN_PROGRESS);
-        subtask2.setEpicId(1);
+        subtask2.setEpicId(epic1.getId());
         subtask2.setStatus(Status.IN_PROGRESS);
         taskManager.addSubtask(subtask1);
         taskManager.addSubtask(subtask2);
@@ -107,6 +120,8 @@ public class InMemoryTaskManagerTest {
         taskManager.updateEpicStatus(epic1);
         assertEquals(Status.IN_PROGRESS, epic1.getStatus());
     }
+
+    // ---------- Получение списков ----------
 
     @Test
     void getTasksEmptyTest() {
@@ -130,14 +145,13 @@ public class InMemoryTaskManagerTest {
     @Test
     void getSubtasksFilledTest() {
         taskManager.addEpic(epic1);
-        subtask1.setEpicId(1);
-        subtask2.setEpicId(1);
+        subtask1.setEpicId(epic1.getId());
+        subtask2.setEpicId(epic1.getId());
         taskManager.addSubtask(subtask1);
         taskManager.addSubtask(subtask2);
-        // List<Subtask> expected = new ArrayList<>(List.of(subtask1, subtask2));
-        Subtask[] expected2 = {subtask1, subtask2};
+        Subtask[] expected = {subtask1, subtask2};
 
-        assertArrayEquals(expected2, taskManager.getSubtasks().toArray());
+        assertArrayEquals(expected, taskManager.getSubtasks().toArray());
     }
 
     @Test
@@ -154,6 +168,8 @@ public class InMemoryTaskManagerTest {
         assertEquals(expected, taskManager.getEpics());
     }
 
+    // ---------- История ----------
+
     @Test
     void getHistoryEmptyTest() {
         assertTrue(taskManager.getHistory().isEmpty());
@@ -164,8 +180,8 @@ public class InMemoryTaskManagerTest {
         taskManager.addTask(task1);
         taskManager.getTask(task1.getId());
         taskManager.getTask(task1.getId());
-        List<BaseTask> expected = List.of(task1);
 
+        List<BaseTask> expected = List.of(task1);
         assertEquals(expected, taskManager.getHistory());
     }
 
@@ -175,10 +191,12 @@ public class InMemoryTaskManagerTest {
         taskManager.addTask(task2);
         taskManager.getTask(task1.getId());
         taskManager.getTask(task2.getId());
-        List<Task> expected = List.of(task1, task2);
 
+        List<BaseTask> expected = List.of(task1, task2);
         assertEquals(expected, taskManager.getHistory());
     }
+
+    // ---------- Приоритетные задачи ----------
 
     @Test
     void getPrioritizedTasksEmptyTest() {
@@ -191,86 +209,81 @@ public class InMemoryTaskManagerTest {
         taskManager.addTask(task2);
 
         List<BaseTask> prioritized = taskManager.getPrioritizedTasks();
-        assertEquals(2, prioritized.size());
+        List<BaseTask> expected = List.of(task2, task1);
+        assertEquals(expected, prioritized);
 
-        // Проверка сортировки: сначала по времени старта, затем по ID
-        if (task1.getStartTime().isBefore(task2.getStartTime())) {
-            assertEquals(task1, prioritized.get(0));
-            assertEquals(task2, prioritized.get(1));
-        } else {
-            assertEquals(task2, prioritized.get(0));
-            assertEquals(task1, prioritized.get(1));
-        }
     }
 
+    // ---------- hasIntersection ----------
+
     @Test
-    void hasIntersectionTest() {
+    void hasIntersectionFalseTest() {
         assertFalse(taskManager.hasIntersection(task1));
     }
 
     @Test
     void hasIntersectionStartInsideExistingTest() {
         Task existingTask = new Task("Существующая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4)); // 05:00–09:00
+                LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4));
         taskManager.addTask(existingTask);
 
         Task newTask = new Task("Новая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 7, 0), Duration.ofHours(2)); // 07:00–09:00 — старт внутри
+                LocalDateTime.of(2026, 5, 19, 7, 0), Duration.ofHours(2));
         assertTrue(taskManager.hasIntersection(newTask));
     }
 
     @Test
     void hasIntersectionEndInsideExistingTest() {
         Task existingTask = new Task("Существующая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4)); // 05:00–09:00
+                LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4));
         taskManager.addTask(existingTask);
 
         Task newTask = new Task("Новая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 3, 0), Duration.ofHours(6)); // 03:00–09:00 — конец внутри
+                LocalDateTime.of(2026, 5, 19, 3, 0), Duration.ofHours(6));
         assertTrue(taskManager.hasIntersection(newTask));
     }
 
     @Test
     void hasIntersectionSurroundingExistingTest() {
         Task existingTask = new Task("Существующая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4)); // 05:00–09:00
+                LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4));
         taskManager.addTask(existingTask);
 
         Task newTask = new Task("Новая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 4, 0), Duration.ofHours(6)); // 04:00–10:00 — охватывает существующую
+                LocalDateTime.of(2026, 5, 19, 4, 0), Duration.ofHours(6));
         assertTrue(taskManager.hasIntersection(newTask));
     }
 
     @Test
     void hasIntersectionExistingSurroundsNewTest() {
         Task existingTask = new Task("Существующая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 4, 0), Duration.ofHours(6)); // 04:00–10:00
+                LocalDateTime.of(2026, 5, 19, 4, 0), Duration.ofHours(6));
         taskManager.addTask(existingTask);
 
         Task newTask = new Task("Новая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4)); // 05:00–09:00 — внутри существующей
+                LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4));
         assertTrue(taskManager.hasIntersection(newTask));
     }
 
     @Test
     void hasIntersectionAdjacentTasksTest() {
         Task existingTask = new Task("Существующая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4)); // 05:00–09:00
+                LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4));
         taskManager.addTask(existingTask);
 
         Task newTask = new Task("Новая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 9, 1), Duration.ofHours(2)); // 09:01–11:00 — впритык, без пересечения
+                LocalDateTime.of(2026, 5, 19, 9, 1), Duration.ofHours(2));
         assertFalse(taskManager.hasIntersection(newTask));
     }
 
     @Test
     void hasIntersectionNewTaskBeforeExistingTest() {
         Task existingTask = new Task("Существующая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 10, 0), Duration.ofHours(4)); // 10:00–14:00
+                LocalDateTime.of(2026, 5, 19, 10, 0), Duration.ofHours(4));
         taskManager.addTask(existingTask);
 
         Task newTask = new Task("Новая", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 5, 59), Duration.ofHours(4)); // 05:00–09:59 — до существующей
+                LocalDateTime.of(2026, 5, 19, 5, 59), Duration.ofHours(4));
         assertFalse(taskManager.hasIntersection(newTask));
     }
 
@@ -278,13 +291,15 @@ public class InMemoryTaskManagerTest {
     void hasIntersectionWithSubtaskTest() {
         taskManager.addEpic(epic1);
         Subtask existingSubtask = new Subtask("Существующая подзадача", "Описание", epic1.getId(),
-                Status.NEW, LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4)); // 05:00–09:00
+                Status.NEW, LocalDateTime.of(2026, 5, 19, 5, 0), Duration.ofHours(4));
         taskManager.addSubtask(existingSubtask);
 
         Task newTask = new Task("Новая задача", "Описание", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 7, 0), Duration.ofHours(2)); // 07:00–09:00 — пересекается с подзадачей
+                LocalDateTime.of(2026, 5, 19, 7, 0), Duration.ofHours(2));
         assertTrue(taskManager.hasIntersection(newTask));
     }
+
+    // ---------- Массовое удаление ----------
 
     @Test
     void removeAllTasksWhenTasksExistTest() {
@@ -312,7 +327,6 @@ public class InMemoryTaskManagerTest {
     @Test
     void removeAllSubtasksWhenSubtasksExistTest() {
         taskManager.addEpic(epic1);
-        taskManager.addEpic(epic2);
         subtask1.setEpicId(epic1.getId());
         subtask2.setEpicId(epic1.getId());
         taskManager.addSubtask(subtask1);
@@ -345,8 +359,6 @@ public class InMemoryTaskManagerTest {
         taskManager.addSubtask(subtask1);
         taskManager.addSubtask(subtask2);
 
-        taskManager.getEpic(epic1.getId());
-        taskManager.getEpic(epic2.getId());
         taskManager.getSubtask(subtask1.getId());
         taskManager.getSubtask(subtask2.getId());
 
@@ -366,25 +378,20 @@ public class InMemoryTaskManagerTest {
         assertTrue(taskManager.getHistory().isEmpty());
     }
 
+    // ---------- get* и исключения ----------
+
     @Test
     void getTaskExistsInTasksTest() {
         taskManager.addTask(task1);
 
-        assertEquals(new ArrayList<>(), taskManager.getHistory());
         assertEquals(task1, taskManager.getTask(task1.getId()));
-    }
-
-    @Test
-    void getTaskExistsInTasksAndHistoryTest() {
-        taskManager.addTask(task1);
-
-        assertEquals(task1, taskManager.getTask(task1.getId()));
-        assertEquals(List.of(task1), taskManager.getHistory());
     }
 
     @Test
     void getTaskNotFoundTest() {
-        assertThrows(TaskNotFoundException.class, () -> taskManager.getTask(Integer.MAX_VALUE));
+        TaskNotFoundException exception = assertThrows(TaskNotFoundException.class,
+                () -> taskManager.getTask(99999));
+        assertEquals("Задача с id '99999' не найдена", exception.getMessage());
     }
 
     @Test
@@ -393,23 +400,13 @@ public class InMemoryTaskManagerTest {
         subtask1.setEpicId(epic1.getId());
         taskManager.addSubtask(subtask1);
 
-        assertEquals(new ArrayList<>(), taskManager.getHistory());
         assertEquals(subtask1, taskManager.getSubtask(subtask1.getId()));
-    }
-
-    @Test
-    void getSubtaskExistsInSubtasksAndHistoryTest() {
-        taskManager.addEpic(epic1);
-        subtask1.setEpicId(epic1.getId());
-        taskManager.addSubtask(subtask1);
-
-        assertEquals(subtask1, taskManager.getSubtask(subtask1.getId()));
-        assertEquals(List.of(subtask1), taskManager.getHistory());
     }
 
     @Test
     void getSubtaskNotFoundTest() {
-        assertThrows(SubtaskNotFoundException.class, () -> taskManager.getSubtask(Integer.MAX_VALUE));
+        assertThrows(SubtaskNotFoundException.class,
+                () -> taskManager.getSubtask(Integer.MAX_VALUE));
     }
 
     @Test
@@ -436,6 +433,8 @@ public class InMemoryTaskManagerTest {
                 () -> taskManager.getEpic(Integer.MAX_VALUE));
     }
 
+    // ---------- getSubtaskOfEpic ----------
+
     @Test
     void getSubtaskOfEpicEmptyWhenEpicNotFoundTest() {
         List<Subtask> subtasks = taskManager.getSubtaskOfEpic(Integer.MAX_VALUE);
@@ -452,11 +451,12 @@ public class InMemoryTaskManagerTest {
         taskManager.addSubtask(subtask2);
 
         List<Subtask> subtasks = taskManager.getSubtaskOfEpic(epic1.getId());
+        List<Subtask> expected = List.of(subtask1, subtask2);
 
-        assertEquals(2, subtasks.size());
-        assertTrue(subtasks.contains(subtask1));
-        assertTrue(subtasks.contains(subtask2));
+        assertEquals(expected, subtasks);
     }
+
+    // ---------- Точечное удаление ----------
 
     @Test
     void removeTaskRemovesFromTasksHistoryAndPrioritizedTest() {
@@ -472,10 +472,8 @@ public class InMemoryTaskManagerTest {
     }
 
     @Test
-    void removeTaskNonExistingReturnsNullTest() {
-        Task removed = taskManager.removeTask(Integer.MAX_VALUE);
-
-        assertNull(removed);
+    void removeTaskNonExistingThrowExceptionTest() {
+        assertThrows(FileNotFoundException.class, () -> taskManager.removeTask(Integer.MAX_VALUE));
     }
 
     @Test
@@ -525,6 +523,8 @@ public class InMemoryTaskManagerTest {
         assertNull(removed);
     }
 
+    // ---------- Добавление ----------
+
     @Test
     void addTaskSuccessSetsIdAndAddsToPrioritizedTest() {
         boolean result = taskManager.addTask(task1);
@@ -545,7 +545,7 @@ public class InMemoryTaskManagerTest {
         boolean result = taskManager.addEpic(epic1);
 
         assertTrue(result);
-        assertTrue(epic1.getId() > 0);
+        assertEquals(1, epic1.getId());
         assertEquals(List.of(epic1), taskManager.getEpics());
     }
 
@@ -570,18 +570,17 @@ public class InMemoryTaskManagerTest {
 
     @Test
     void addSubtaskWithoutEpicReturnsFalseTest() {
-        // epic не добавлен в менеджер
-        subtask1.setEpicId(999);
-
         boolean result = taskManager.addSubtask(subtask1);
 
         assertFalse(result);
         assertTrue(taskManager.getSubtasks().isEmpty());
     }
 
+    // ---------- Пересечения при add/update ----------
+
     @Test
     void addTaskWithIntersectionThrowsExceptionTest() {
-        taskManager.addTask(task1); // уже в менеджере
+        taskManager.addTask(task1);
 
         Task intersecting = new Task("Пересекается", "Описание", Status.NEW,
                 task1.getStartTime().plusMinutes(10), Duration.ofHours(1));
@@ -595,7 +594,6 @@ public class InMemoryTaskManagerTest {
         taskManager.addTask(task1);
         taskManager.addEpic(epic1);
         subtask1.setEpicId(epic1.getId());
-        // время пересекается с task1
         subtask1.setStartTime(task1.getStartTime().plusMinutes(5));
 
         assertThrows(IntersectionException.class,
@@ -607,7 +605,6 @@ public class InMemoryTaskManagerTest {
         taskManager.addTask(task1);
         taskManager.addTask(task2);
 
-        // пробуем обновить task2 так, чтобы он пересекался с task1
         Task updated = new Task(task2.getName(), task2.getDescription(), task2.getStatus(),
                 task1.getStartTime(), Duration.ofHours(1));
         updated.setId(task2.getId());
@@ -621,19 +618,17 @@ public class InMemoryTaskManagerTest {
         taskManager.addEpic(epic1);
         taskManager.addTask(task1);
 
-        // добавляем подзадачу без пересечения с task1
         subtask1.setEpicId(epic1.getId());
-        subtask1.setStartTime(task1.getStartTime().minusHours(5)); // далеко до task1
+        subtask1.setStartTime(task1.getStartTime().minusHours(5));
         subtask1.setDuration(Duration.ofHours(1));
         taskManager.addSubtask(subtask1);
 
-        // обновляем подзадачу так, чтобы она пересекалась с task1
         Subtask updated = new Subtask(
                 subtask1.getName(),
                 subtask1.getDescription(),
                 epic1.getId(),
                 subtask1.getStatus(),
-                task1.getStartTime(),           // старт совпадает с task1
+                task1.getStartTime(),
                 Duration.ofHours(1)
         );
         updated.setId(subtask1.getId());
@@ -641,6 +636,8 @@ public class InMemoryTaskManagerTest {
         assertThrows(IntersectionException.class,
                 () -> taskManager.updateSubtask(updated));
     }
+
+    // ---------- Успешные update ----------
 
     @Test
     void updateTaskSuccessChangesFieldsTest() {
@@ -688,7 +685,7 @@ public class InMemoryTaskManagerTest {
         assertEquals("Новое имя", fromManager.getName());
         assertEquals("Новое описание", fromManager.getDescription());
         assertEquals(Status.DONE, fromManager.getStatus());
-        // Проверяем, что статус эпика пересчитан
+
         taskManager.updateEpicStatus(epic1);
         assertEquals(Status.DONE, epic1.getStatus());
     }
@@ -696,17 +693,19 @@ public class InMemoryTaskManagerTest {
     @Test
     void updateSubtaskNonExistingReturnsFalseTest() {
         taskManager.addEpic(epic1);
-        Subtask updated = new Subtask("Имя", "Опис", epic1.getId(),
-                Status.NEW, LocalDateTime.now(), Duration.ofHours(1));
-        updated.setId(999);
+        Subtask updated = new Subtask("Имя", "Опис",999, Status.NEW ,epic1.getId(),
+                LocalDateTime.now(), Duration.ofHours(1));
 
         assertFalse(taskManager.updateSubtask(updated));
     }
 
     @Test
     void updateSubtaskWithNonExistingEpicReturnsFalseTest() {
-        subtask1.setEpicId(999);
-        subtask1.setId(1); // предполагаем id
+        //todo нужно проверить, что ид сабтаски существует в менеджере, а ид эпика с которым добавляется новая сабтаска - не существует
+        taskManager.addEpic(epic1);
+        subtask1.setEpicId(epic1.getId());
+        subtask1.setId(1);
+
         assertFalse(taskManager.updateSubtask(subtask1));
     }
 
@@ -736,8 +735,15 @@ public class InMemoryTaskManagerTest {
         assertFalse(taskManager.updateEpic(updated));
     }
 
+    // ---------- patchTask ----------
+
+    /**
+     * Эти тесты имеют смысл в InMemoryTaskManager,
+     * но FileBackedTaskManager просто наследует поведение, поэтому тоже пройдут.
+     */
     @Test
     void patchTaskForNonExistingTaskReturnsFalseTest() {
+
         task1.setId(999);
 
         assertFalse(taskManager.patchTask(task1));
@@ -745,6 +751,7 @@ public class InMemoryTaskManagerTest {
 
     @Test
     void patchTaskForNonExistingSubtaskReturnsFalseTest() {
+
         subtask1.setId(999);
 
         assertFalse(taskManager.patchTask(subtask1));

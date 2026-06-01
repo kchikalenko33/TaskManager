@@ -38,6 +38,10 @@ public class FileBackedTaskManager extends InMemoryTaskManager {
     public static List<Integer> historyFromString(String value) {
         List<Integer> historyIds = new ArrayList<>();
 
+        if (value == null || value.isBlank()) {
+            return historyIds;
+        }
+
         for (String string : value.split(",")) {
             historyIds.add(Integer.parseInt(string));
         }
