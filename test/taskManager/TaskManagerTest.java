@@ -473,7 +473,7 @@ public abstract class TaskManagerTest<T extends TaskManager> {
 
     @Test
     void removeTaskNonExistingThrowExceptionTest() {
-        assertThrows(FileNotFoundException.class, () -> taskManager.removeTask(Integer.MAX_VALUE));
+        assertThrows(TaskNotFoundException.class, () -> taskManager.removeTask(Integer.MAX_VALUE));
     }
 
     @Test

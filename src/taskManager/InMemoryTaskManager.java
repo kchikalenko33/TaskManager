@@ -341,7 +341,6 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     HistoryManager getHistoryManager() {
-        HistoryManager copyHistoryManager = historyManager;
-        return copyHistoryManager;
+        return historyManager;
     }
 }
