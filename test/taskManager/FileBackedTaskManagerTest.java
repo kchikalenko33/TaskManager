@@ -1,6 +1,7 @@
 package taskManager;
 
 import exception.FileNotFoundException;
+import exception.FileSaveException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import task.*;
@@ -236,7 +237,228 @@ public class FileBackedTaskManagerTest extends TaskManagerTest<FileBackedTaskMan
 
     @Test
     void saveThrowFileSaveExceptionTest() {
-        //todo через рефлекшн
+        File dir = new File("saveTestDir");
+        dir.mkdir();
+
+        FileBackedTaskManager badManager = new FileBackedTaskManager(dir);
+
+        assertThrows(FileSaveException.class,
+                badManager::save,
+                "save() должен выбросить FileSaveException при ошибке записи в файл");
+
+        dir.delete();
     }
 
+    @Test
+    void saveWithSingleTaskFormatTest() throws IOException {
+        taskManager.addTask(task1);
+
+        String actual = String.join("\n", Files.readAllLines(file.toPath()));
+
+        String taskLine = taskManager.toString(task1);
+        String expected = String.join("\n", List.of(
+                "id,type,name,status,description,startTime,duration,epicId",
+                taskLine,
+                "",
+                "",
+                String.valueOf(taskManager.idGen)
+        ));
+
+        assertEquals(expected, actual,
+                "Формат файла с одной задачей не соответствует ожидаемому");
+    }
+
+    // ---------- loadFromFile() ----------
+    @Test
+    void loadFromFileEmptyFileReturnsEmptyManagerTest() {
+        taskManager.save();
+
+        FileBackedTaskManager loaded = FileBackedTaskManager.loadFromFile(file);
+
+        assertTrue(loaded.getTasks().isEmpty(),
+                "После загрузки из пустого менеджера список обычных задач должен быть пустым");
+        assertTrue(loaded.getEpics().isEmpty(),
+                "После загрузки из пустого менеджера список эпиков должен быть пустым");
+        assertTrue(loaded.getSubtasks().isEmpty(),
+                "После загрузки из пустого менеджера список подзадач должен быть пустым");
+        assertTrue(loaded.getHistory().isEmpty(),
+                "После загрузки из пустого менеджера история должна быть пустой");
+    }
+
+    @Test
+    void loadFromFileRestoresSingleTaskWithoutHistoryTest() {
+        taskManager.addTask(task1);
+        int originalIdGen = taskManager.idGen;
+
+        FileBackedTaskManager loaded = FileBackedTaskManager.loadFromFile(file);
+        List<Task> originalTasks = taskManager.getTasks();
+        List<Task> loadedTasks = loaded.getTasks();
+
+        // Восстановился ровно одна Task
+        assertEquals(originalTasks.size(), loadedTasks.size(),
+                "Количество задач до сохранения и после загрузки должно совпадать");
+        assertEquals(originalTasks.get(0), loadedTasks.get(0),
+                "Задача до сохранения и после загрузки должна быть эквивалентна");
+
+        // История пустая (нет вызова getTask до загрузки)
+        assertTrue(loaded.getHistory().isEmpty(),
+                "Если задачи не запрашивались, история после загрузки должна быть пустой");
+
+        // Приоритетный список содержит ту же самую задачу
+        List<BaseTask> prioritized = loaded.getPrioritizedTasks();
+        assertEquals(1, prioritized.size(),
+                "После загрузки в приоритетном списке должна быть одна задача");
+        assertEquals(loadedTasks.get(0).getId(), prioritized.get(0).getId(),
+                "После загрузки в приоритетном списке должна быть именно восстановленная задача");
+
+        // idGen восстановился
+        assertEquals(originalIdGen, loaded.idGen,
+                "После загрузки значение idGen должно совпадать с исходным");
+    }
+
+
+
+    @Test
+    void loadFromFileRestoresEpicAndSubtasksRelationsAndStatusTest() {
+        // arrange: создаём эпик и две подзадачи
+        taskManager.addEpic(epic1);
+        subtask1.setEpicId(epic1.getId());
+        subtask2.setEpicId(epic1.getId());
+        taskManager.addSubtask(subtask1);
+        taskManager.addSubtask(subtask2);
+
+        taskManager.updateEpicStatus(epic1);
+        int originalIdGen = taskManager.idGen;
+
+        // act
+        FileBackedTaskManager loaded = FileBackedTaskManager.loadFromFile(file);
+
+        List<Epic> originalEpics   = taskManager.getEpics();
+        List<Epic> loadedEpics     = loaded.getEpics();
+        List<Subtask> originalSubs = taskManager.getSubtasks();
+        List<Subtask> loadedSubs   = loaded.getSubtasks();
+
+        // ---------- проверка количества ----------
+        assertEquals(1, loadedEpics.size(),
+                "После загрузки должен восстановиться один эпик");
+        assertEquals(2, loadedSubs.size(),
+                "После загрузки должны восстановиться две подзадачи");
+
+        // ---------- проверка эпика ----------
+        Epic origEpic = originalEpics.get(0);
+        Epic loadEpic = loadedEpics.get(0);
+
+        assertEquals(origEpic.getId(), loadEpic.getId(),
+                "Id эпика после загрузки должен совпадать");
+        assertEquals(origEpic.getName(), loadEpic.getName(),
+                "Имя эпика после загрузки должно совпадать");
+        assertEquals(origEpic.getDescription(), loadEpic.getDescription(),
+                "Описание эпика после загрузки должно совпадать");
+        assertEquals(origEpic.getStatus(), loadEpic.getStatus(),
+                "Статус эпика после загрузки должен совпадать");
+        assertEquals(origEpic.getStartTime(), loadEpic.getStartTime(),
+                "startTime эпика после загрузки должен совпадать");
+        assertEquals(origEpic.getDuration(), loadEpic.getDuration(),
+                "duration эпика после загрузки должен совпадать");
+
+        assertEquals(2, loadEpic.getSubtaskIds().size(),
+                "У эпика после загрузки должны быть две подзадачи");
+        assertTrue(loadEpic.getSubtaskIds().containsAll(
+                        List.of(subtask1.getId(), subtask2.getId())),
+                "У эпика после загрузки должны быть те же subtaskId, что и до сохранения");
+
+
+        originalSubs.sort((a, b) -> Integer.compare(a.getId(), b.getId()));
+        loadedSubs.sort((a, b) -> Integer.compare(a.getId(), b.getId()));
+
+        assertEquals(originalSubs.size(), loadedSubs.size(),
+                "Количество подзадач до сохранения и после загрузки должно совпадать");
+
+        for (int i = 0; i < originalSubs.size(); i++) {
+            Subtask origSub = originalSubs.get(i);
+            Subtask loadSub = loadedSubs.get(i);
+
+            assertEquals(origSub.getId(), loadSub.getId(),
+                    "Id подзадачи после загрузки должен совпадать");
+            assertEquals(origSub.getName(), loadSub.getName(),
+                    "Имя подзадачи после загрузки должно совпадать");
+            assertEquals(origSub.getDescription(), loadSub.getDescription(),
+                    "Описание подзадачи после загрузки должно совпадать");
+            assertEquals(origSub.getStatus(), loadSub.getStatus(),
+                    "Статус подзадачи после загрузки должен совпадать");
+            assertEquals(origSub.getStartTime(), loadSub.getStartTime(),
+                    "startTime подзадачи после загрузки должен совпадать");
+            assertEquals(origSub.getDuration(), loadSub.getDuration(),
+                    "duration подзадачи после загрузки должен совпадать");
+            assertEquals(origSub.getEpicId(), loadSub.getEpicId(),
+                    "epicId подзадачи после загрузки должен совпадать");
+        }
+
+        // ---------- проверка idGen ----------
+        assertEquals(originalIdGen, loaded.idGen,
+                "После загрузки значение idGen должно совпадать с исходным");
+    }
+
+    @Test
+    void loadFromFileRestoresHistoryTest() {
+        taskManager.addEpic(epic1);
+        subtask1.setEpicId(epic1.getId());
+        taskManager.addSubtask(subtask1);
+        taskManager.addTask(task1);
+
+        // формируем историю
+        taskManager.getEpic(epic1.getId());
+        taskManager.getSubtask(subtask1.getId());
+        taskManager.getTask(task1.getId());
+
+        FileBackedTaskManager loaded = FileBackedTaskManager.loadFromFile(file);
+
+        List<BaseTask> history = loaded.getHistory();
+        assertEquals(3, history.size(),
+                "После загрузки история должна содержать три записи");
+
+        assertEquals(epic1.getId(), history.get(0).getId(),
+                "Первым в истории после загрузки должен быть эпик");
+        assertEquals(subtask1.getId(), history.get(1).getId(),
+                "Вторым в истории после загрузки должна быть подзадача");
+        assertEquals(task1.getId(), history.get(2).getId(),
+                "Третьим в истории после загрузки должна быть обычная задача");
+    }
+
+    @Test
+    void loadFromFileRestoresPrioritizedTasksForTaskAndSubtaskTest() {
+        taskManager.addEpic(epic1);
+        subtask1.setEpicId(epic1.getId());
+        taskManager.addSubtask(subtask1);
+        taskManager.addTask(task1);
+
+        FileBackedTaskManager loaded = FileBackedTaskManager.loadFromFile(file);
+
+        List<BaseTask> prioritized = loaded.getPrioritizedTasks();
+
+        assertEquals(2, prioritized.size(),
+                "После загрузки в приоритетном списке должны быть задача и подзадача");
+        List<Integer> ids = prioritized.stream().map(BaseTask::getId).toList();
+        assertTrue(ids.contains(task1.getId()),
+                "После загрузки в приоритетном списке должна быть обычная задача");
+        assertTrue(ids.contains(subtask1.getId()),
+                "После загрузки в приоритетном списке должна быть подзадача");
+    }
+
+    @Test
+    void loadFromFileWithoutEmptyLineUsesFallbackIndexTest() throws IOException {
+        // 4 строки, ни одна из которых не равна "" (чисто пустой строке)
+        String content = String.join("\n", List.of(
+                "id,type,name,status,description,startTime,duration,epicId",
+                "1,TASK,Task,NEW,Desc,2026-05-19T05:12,PT4H,",
+                "",
+                "2"
+        ));
+        Files.writeString(file.toPath(), content);
+
+        FileBackedTaskManager loaded = FileBackedTaskManager.loadFromFile(file);
+
+        assertEquals(1, loaded.getTasks().size(),
+                "При отсутствии пустой строки-разделителя задача должна восстановиться по запасному сценарию");
+    }
 }

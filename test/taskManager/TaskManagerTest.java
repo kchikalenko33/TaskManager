@@ -36,7 +36,7 @@ public abstract class TaskManagerTest<T extends TaskManager> {
         taskManager = createTaskManager();
 
         task1 = new Task("Задача1", "Описание1", Status.NEW,
-                LocalDateTime.of(2026, 5, 19, 5, 12), Duration.ofHours(4));
+                LocalDateTime.of(2026, 5, 17, 5, 12), Duration.ofHours(4));
         task2 = new Task("Задача2", "Описание2", Status.NEW,
                 LocalDateTime.of(2026, 4, 29, 5, 12), Duration.ofHours(2));
         epic1 = new Epic("Эпик1", "Описание1", Status.NEW,
